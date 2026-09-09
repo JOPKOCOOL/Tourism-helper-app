@@ -1,59 +1,80 @@
-# TatinFrontend
+# Tourism Helper App
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.1.2.
+Frontend for an app that helps with the registration of tourists. Built with Angular 22 (standalone components, signals) against a separate backend API.
 
-## Development server
+## Status
 
-To start a local development server, run:
+Early-stage. Currently implemented: email/password login, JWT access/refresh authentication, and protected routing with an (intentionally empty) dashboard shell that later tourist-registration features will build on.
 
-```bash
-ng serve
+## Tech stack
+
+- Angular 22 — standalone components, signals, new control-flow syntax
+- TypeScript
+- Tailwind CSS 4
+- RxJS
+- Vitest (unit tests)
+
+## Authentication architecture
+
+- **Access token**: returned by the backend on login, held in memory only (never persisted to storage), attached to outgoing requests via an `Authorization: Bearer` header by a functional HTTP interceptor (`src/app/core/interceptors/auth.interceptor.ts`).
+- **Refresh token**: an httpOnly cookie set by the backend — never visible to JavaScript.
+- On app startup, an app initializer calls `/auth/refresh` to silently restore the session after a page reload.
+- On a `401` response, the interceptor transparently refreshes the access token and retries the original request once. Concurrent `401`s share a single in-flight refresh call instead of triggering duplicate refresh requests.
+- **Route protection**: functional guards (`authGuard`, `guestGuard`) redirect based on auth state — logged-out users are sent from `/dashboard` to `/login`, and logged-in users are sent from `/login` straight to `/dashboard`.
+
+## Project structure
+
+```
+src/app/
+  core/         # app-wide singletons: guards, interceptors, services, models
+  features/     # feature areas (auth, dashboard, ...)
+  layout/       # shared page chrome (header, footer, sidebar) — not yet built
+  shared/       # reusable components, directives, pipes, utils — not yet built
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## Getting started
 
-## Code scaffolding
+### Prerequisites
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+- Node.js and npm
+- The backend API running locally (proxy defaults to `http://localhost:3000`)
 
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+### Install
 
 ```bash
-ng generate --help
+npm install
 ```
 
-## Building
+### Configure the backend URL
 
-To build the project run:
+Requests to `/auth/*` are proxied in dev to avoid CORS and keep cookie handling same-origin. If your backend runs somewhere other than `http://localhost:3000`, update the target in `proxy.conf.json`.
+
+### Run the dev server
 
 ```bash
-ng build
+npm start
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+Then open `http://localhost:4200`.
 
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+### Build
 
 ```bash
-ng test
+npm run build
 ```
 
-## Running end-to-end tests
+Compiles the app and writes build artifacts to `dist/`.
 
-For end-to-end (e2e) testing, run:
+### Test
 
 ```bash
-ng e2e
+npm test
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+Runs unit tests with [Vitest](https://vitest.dev/).
 
-## Additional Resources
+## Roadmap
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- Tourist registration features (dashboard content)
+- WebSocket support (not yet implemented on the backend)
+- `/auth/me` endpoint integration to replace the current refresh-based session check on startup
